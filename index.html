@@ -1,0 +1,296 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+    <head>
+	<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+	<meta content="utf-8" http-equiv="encoding">
+        <title>Irrigation Control System - MQTT over websockets</title>
+        <style type="text/css">
+            #status {
+                padding: 5px;
+                display: inline-block;
+            }
+            label, .label {
+                display: inline-block;
+                width: 100px;
+            }
+            li {
+                list-style: none;
+
+                background: #fff;
+                margin: 2px;
+            }
+            ul {
+                background: #eef;
+            }
+            .disconnected {
+                background-color: #f88;
+            }
+            input {
+                width: 400px;
+            }
+            .connected {
+                background-color: #8f8;
+            }
+
+            #messagelist {
+                width: 600px;
+                height: 200px;
+                overflow-y: scroll;
+            }
+			#t1, #h1, #h2, #l1, #ts, #tf, #pc, #lc, #d1, #t2, #c1, #r1, #r2, #r3, #r4, #l1, #ct1, #g4 , #g5, #g6, #g7, #c1, #c2, #c3, #c4, #b1 {
+				width:150px; height:78px;
+				display: inline-block;
+				margin: 0em;
+			}
+        </style>
+    <script src="./mqttws31.js"></script>
+    <script src="./jquery-1.11.1.min.js"></script>
+    <script src="./raphael.2.1.0.min.js"></script>
+    <script src="./justgage.1.0.1.min.js"></script>
+    <script type="text/javascript">		
+
+    $(document).ready(function() {
+		
+		$('#attiva').click(function() {
+			var message = new Messaging.Message("1");
+			message.destinationName = "/ics/setpump";
+			message.qos = 0;
+			client.send(message);
+		})
+		
+		$('#disattiva').click(function() {
+			var message = new Messaging.Message("0");
+			message.destinationName = "/ics/setpump";
+			message.qos = 0;
+			client.send(message);
+		})
+
+                $('#force').click(function() {
+                        var message = new Messaging.Message("1");
+                        message.destinationName = "/ics/settiltforce";
+                        message.qos = 0;
+                        client.send(message);
+                })
+                
+                $('#unforce').click(function() {
+                        var message = new Messaging.Message("0");
+                        message.destinationName = "/ics/settiltforce";
+                        message.qos = 0;
+                        client.send(message);
+                })
+
+        function doSubscribe() {
+        }
+
+        function doDisconnect() {
+            client.disconnect();
+        }
+
+        // Web Messaging API callbacks
+        var onSuccess = function(value) {
+            $('#status').toggleClass('connected',true);
+            $('#status').text('Success');
+        }
+
+        var onConnect = function(frame) {
+            $('#status').toggleClass('connected',true);
+            $('#status').text('Connected');
+            client.subscribe("/ics/#");
+            //var form = document.getElementById("example");
+            //form.connected.checked= true;
+        }
+        var onFailure = function(error) {
+            $('#status').toggleClass('connected',false);
+            $('#status').text("Failure");
+        }
+
+        function onConnectionLost(responseObject) {
+            //var form = document.getElementById("example");
+            //form.connected.checked= false;
+            //if (responseObject.errorCode !== 0)
+            alert(client.clientId+"\n"+responseObject.errorCode);
+        }
+
+        function onMessageArrived(message) {
+            $('#messagelist').prepend('<li>'+message.destinationName+ '->' +message.payloadString+'</li>');
+            //var form = document.getElementById("example");
+            //form.receiveMsg.value = message.payloadString;
+		if (!isNaN(message.payloadString)) {
+			if (message.destinationName == "/ics/temp") {
+				temp = message.payloadString;
+			};
+			if (message.destinationName == "/ics/humi") {
+				humi = message.payloadString;
+			};
+			if (message.destinationName == "/ics/humi2") {
+				humi2 = message.payloadString;
+			};
+			if (message.destinationName == "/ics/light") {
+				light = message.payloadString;
+			}
+			if (message.destinationName == "/ics/tiltstatus") {
+				tiltstatus = message.payloadString;
+			}
+			if (message.destinationName == "/ics/forcetiltstatus") {
+				forcetiltstatus = message.payloadString;
+			}
+			if (message.destinationName == "/ics/pumpstatus") {
+				pumpstatus = message.payloadString;
+			}
+			if (message.destinationName == "/ics/lightstatus") {
+				lightstatus = message.payloadString;
+			}
+			if (message.destinationName == "/ics/dewpoint") {
+				dewpoint = message.payloadString;
+			}
+		}
+        }
+		
+	var t1, h1, h2, l1, ts, tf, pc, lc, d1, t2, c1, b1, r1, r2, r3, r4, l1, ct1;
+	var temp, humi, humi2, light, tiltstatus, forcetiltstatus, pumpstatus, lightstatus, dewpoint, temp1, temp2, cond1, batt1, relay1, relay2, relay3, relay4, condt1;
+	var light1
+
+  	window.onload = function(){
+
+        var t1 = new JustGage({
+          id: "t1",
+          value: 0, 
+          min: -10,
+          max: 45,
+          decimals: 2,
+          title: "Temperature",
+          titleFontColor: "Black",
+          label: "C",
+        });
+var h1 = new JustGage({
+          id: "h1",
+          value: 0, 
+          min: -10,
+          max: 110,
+          decimals: 2,
+          title: "Humidity",
+          titleFontColor: "Black",
+          label: "%",
+        });
+var h2 = new JustGage({
+          id: "h2",
+          value: 0, 
+          min: -10,
+          max: 110,
+          decimals: 2,
+          title: "Soil Humidity",
+          titleFontColor: "Black",
+          label: "%",
+        });
+var l1 = new JustGage({
+          id: "l1",
+          value: 0, 
+          min: 0,
+          max: 1024,
+          decimals: 0,
+          title: "Light Intensity",
+          titleFontColor: "Black",
+          label: "0-1024",
+        });
+var d1 = new JustGage({
+          id: "d1",
+          value: 0, 
+          min: -10,
+          max: 45,
+          decimals: 2,
+          title: "Dew Point",
+          titleFontColor: "Black",
+          label: "C",
+        });
+var ts = new JustGage({
+          id: "ts",
+          value: 0, 
+          min: 0,
+          max: 1,
+          decimals: 0,
+          title: "Tilt sensor",
+          titleFontColor: "Black",
+          label: "ON/OFF",
+        });
+var tf = new JustGage({
+          id: "tf",
+          value: 0, 
+          min: 0,
+          max: 1,
+          decimals: 0,
+          title: "Ignore tilt sensor",
+          titleFontColor: "Black",
+          label: "ON/OFF",
+        });
+var pc = new JustGage({
+          id: "pc",
+          value: 0, 
+          min: 0,
+          max: 1,
+          decimals: 0,
+          title: "Pump Control",
+          titleFontColor: "Black",
+          label: "ON/OFF",
+        });
+var lc = new JustGage({
+          id: "lc",
+          value: 0, 
+          min: 0,
+          max: 1,
+          decimals: 0,
+          title: "Light Control",
+          titleFontColor: "Black",
+          label: "ON/OFF",
+        });
+
+	setInterval(function() {
+		t1.refresh(temp); 
+		h1.refresh(humi);
+		h2.refresh(humi2);  		
+		l1.refresh(light); 
+		ts.refresh(tiltstatus);
+		tf.refresh(forcetiltstatus);
+		pc.refresh(pumpstatus);
+		lc.refresh(lightstatus);		
+		d1.refresh(dewpoint);
+        }, 2000);
+      };
+
+        var client;
+        var r = Math.round(Math.random()*Math.pow(10,5));
+        var d = new Date().getTime();
+        var cid = r.toString() + "-" + d.toString()
+        client = new Messaging.Client("xxxx.yyyy.com", 8888, cid );
+        client.onConnect = onConnect;
+        client.onMessageArrived = onMessageArrived;
+        client.onConnectionLost = onConnectionLost;
+        client.connect({onSuccess: onConnect, onFailure: onFailure, userName:"uuuuuu", password:"pppppp"});
+});
+
+    </script>		
+    </head>
+    <body>
+        <h1>Irrigation Control System</h1>
+        <span class='label'>Status</span> <div id="status" class="disconnected">Pending</div>
+		<P>
+        <div id="t1" style="background-color:#00CCFF"></div>
+		<div id="h1" style="background-color:#00CCFF"></div>
+		<div id="h2" style="background-color:#00CCFF"></div>
+		<div id="l1" style="background-color:#00FFFF"></div>
+		<div id="d1" style="background-color:#00FFFF"></div>
+		<BR>
+		<div id="ts" style="background-color:#99FF99"></div>
+		<div id="tf" style="background-color:#99FF99"></div>
+		<div id="pc" style="background-color:#99FF99"></div>
+		<div id="lc" style="background-color:#99FF99"></div>
+		<P>
+		<input id="attiva" type="button" value="Pump ON"</>
+		<input id="disattiva" type="button" value="Pump OFF"</>
+		<P>
+                	<input id="force" type="button" value="Ignore Tilt Sensor"</>
+               	 	<input id="unforce" type="button" value="Activate Tilt Sensor"</>
+               		 <P>
+		<div id="messages"><ul id="messagelist">
+        </ul></div>
+    </body>
+</html>
